@@ -37,7 +37,7 @@ fn main() {
     }
 
     let checkpoint_path = &args[1];
-    let mut tokenizer_path = "tokenizer.json".to_string();
+    let mut tokenizer_path = "/home/maderix/llama2.rs_new/tokenizer.json".to_string();
     let mut temperature = 1.0;
     let mut topp = 0.9;
     let mut steps = 256;

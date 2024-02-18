@@ -1,12 +1,14 @@
-use std::{arch::x86_64, cmp::Ordering, fs::File, io::{self, BufReader, Read}, path::Path};
+use std::{arch::x86_64, cmp::{min, Ordering}, fs::File, io::{self, BufReader, Read}, path::Path};
 use std::f32::{self};
 use rayon::prelude::*;
 use memmap2::{Mmap, MmapOptions};
 use rand::{rngs::StdRng, Rng, SeedableRng};
 use tokenizers::Tokenizer;
+pub mod optimfn;
 pub const GS: usize = 64; 
 /// Represents a quantized tensor with quantized values and scaling factors.
 #[derive(Clone)]
+#[repr(align(32))]
 pub struct QuantizedTensor {
     pub q: Vec<i8>,
     pub s: Vec<f32>,
@@ -627,30 +629,44 @@ pub fn softmax(x: &mut [f32]) {
     x.iter_mut().for_each(|xi| *xi /= sum);
 }
 
-pub fn matmul(xout: &mut Vec<f32>, x: &QuantizedTensor, ws: &[QuantizedTensor], n: usize, d: usize, layer_index: usize, gs: usize) {
+
+pub fn matmul(
+    xout: &mut Vec<f32>,
+    x: &QuantizedTensor,
+    ws: &[QuantizedTensor],
+    n: usize,
+    d: usize,
+    layer_index: usize,
+    gs: usize,
+) {
     let w = &ws[layer_index];
+    assert_eq!(w.q.len(), d * n); // Ensure dimensions match
+    assert_eq!(xout.len(), d);
 
     xout.par_iter_mut().enumerate().for_each(|(i, val)| {
         let mut local_val = 0.0f32;
+        let mut ival = 0i32;
+        let in_base = i * n;
 
         for j in (0..n).step_by(gs) {
-            let mut ival = 0i32; // Reset ival for each group
             for k in 0..gs {
                 let idx_x = j + k;
-                let idx_w = i * n + j + k; // Corrected index calculation
+                let idx_w = in_base + j + k;
+
                 if idx_x < x.q.len() && idx_w < w.q.len() {
                     ival += x.q[idx_x] as i32 * w.q[idx_w] as i32;
                 }
             }
-            // Apply scale immediately after accumulation for each group
-            if j / gs < x.s.len() && (i * n + j) / gs < w.s.len() {
-                local_val += (ival as f32) * x.s[j / gs] * w.s[(i * n + j) / gs];
-            }
+
+            let x_scale_idx = min(j / gs, x.s.len() - 1);
+            let w_scale_idx = min((in_base + j) / gs, w.s.len() - 1);
+
+            local_val += (ival as f32) * x.s[x_scale_idx] * w.s[w_scale_idx];
+            ival = 0;
         }
 
         *val = local_val;
     });
 }
-
 
 

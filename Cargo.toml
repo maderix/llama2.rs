@@ -7,9 +7,25 @@ edition = "2021"
 
 [dependencies]
 memmap2 = "0.9.4"
-rand = "0.8.0"
+rand = "0.8.4"
 rayon = "1.5.0"
 tokenizers = "0.15.1"
 byteorder = "1.4.3"
 approx = "0.5.0"
+ndarray = "0.15.3"
+ndarray-rand = "0.14.0"
+iter_tools = "*"
+
+[dev-dependencies]
+criterion = "*"
+
+[profile.release]
+opt-level = 3
+lto = true # Link Time Optimization
+codegen-units = 1 # Improve optimizations but increases compile time
+
+[build]
+rustflags = ["-C", "target-cpu=native", "-C", "target-feature=+avx2"]
+
+
 

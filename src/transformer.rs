@@ -7,6 +7,7 @@ use std::io::{self, BufReader, Read, Write};
 use std::path::Path;
 use std::time::Instant;
 use tokenizers::{Encoding, Tokenizer};
+//use llama2_rs::optimfn::matmul;
 
 /// The entire transformer model, encapsulating configuration, weights, and runtime state.
 pub struct Transformer {
@@ -178,7 +179,7 @@ impl Transformer {
                 &self.state.x,
                 &self.weights.rms_att_weight[l * dim..(l + 1) * dim],
             );
-           // QKV MatMuls for this position
+           // QKV matmuls for this position
             self.state.xq.quantize(&self.state.xb, dim);
             matmul(
                 &mut self.state.q,
