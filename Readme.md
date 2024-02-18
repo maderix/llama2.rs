@@ -1,6 +1,7 @@
 # Llama2 Transformer Model in Rust
 
 This repository contains the Rust implementation of the Llama2 Transformer model, focusing on performance and correctness. The implementation covers model creation, tokenization, and operations such as matrix multiplication and softmax, essential for the transformer's forward pass.
+![llama rust](logo.png)
 
 ## Features
 
